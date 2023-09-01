@@ -5,6 +5,11 @@ import com.api.parkingcontrol.model.ParkinSpotModel;
 import com.api.parkingcontrol.service.ParkingSpotService;
 import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,8 +52,8 @@ public class ParkingSpotController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ParkinSpotModel>> getAllParkingSpots() {
-        return ResponseEntity.status(HttpStatus.OK).body(parkingSpotService.findall());
+    public ResponseEntity<Page<ParkinSpotModel>> getAllParkingSpots(@PageableDefault(page = 0, size = 10, sort = "id", direction = Sort.Direction.ASC)Pageable pageable) {
+        return ResponseEntity.status(HttpStatus.OK).body(parkingSpotService.findall(pageable));
     }
 
     @GetMapping("/{id}")
@@ -69,6 +74,24 @@ public class ParkingSpotController {
         parkingSpotService.delete(parkinSpotModelOptional.get());
         return ResponseEntity.status(HttpStatus.OK).body("Parking Spot deleted sucessfully.");
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Object> updatingParkingSpot(@PathVariable(value = "id") UUID id,
+                                                     @RequestBody @Valid ParkingSpotDto parkingSpotDto) {
+        Optional<ParkinSpotModel> parkingSpotModelOptional = parkingSpotService.findById(id);
+        if (!parkingSpotModelOptional.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Parking Spot not found");
+        }
+
+        var parkingSpotModel = parkingSpotModelOptional.get();
+        BeanUtils.copyProperties(parkingSpotDto, parkingSpotModel);
+        parkingSpotModel.setRegistrationDate(parkingSpotModelOptional.get().getRegistrationDate());
+        parkingSpotModel.setId(parkingSpotModelOptional.get().getId());
+
+        return ResponseEntity.status(HttpStatus.OK).body(parkingSpotService.save(parkingSpotModel));
+    }
+
+
 
 
 }
